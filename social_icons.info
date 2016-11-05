@@ -1,0 +1,7 @@
+name = social_icons
+description = this is a social module
+package = social_package
+core = 7.x
+files[] = social_icons.module
+files[] = social_icons.install
+configure = localhost/drupal/admin/config/administration/social_icons
