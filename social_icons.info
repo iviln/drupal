@@ -1,5 +1,5 @@
 name = social_icons
-description = this is a social module
+description = this is a social icons module
 package = social_package
 core = 7.x
 files[] = social_icons.module
