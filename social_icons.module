@@ -253,12 +253,12 @@ function social_icons_setting_form_validate($form, $form_state) {
   $form_state['values']['hover_icon'] = $hover_icon;
 
   // Загружаем файл в sites/default/files (по умолчанию)
- if ($file = file_save_upload('icon', $validators, 'public://')) {
+ /*if ($file = file_save_upload('icon', $validators, 'public://')) {
     $form_state['values']['icon'] = $file; // передаём информацию о файле в ф-ю social_icons_setting_form_submit()
   }
  else {
     form_set_error('icon', 'Файл не был загружен');
-  }
+  }*/
 }
 
 /**
