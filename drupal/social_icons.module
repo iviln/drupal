@@ -397,7 +397,7 @@ function social_icons_block_contents($delta) {
   foreach ($social_icons as $id) {
     $entity = social_icons_load($id->id);
       $rows[] = array(
-      theme_image(social_icons_image_array($entity->icon)),
+      l(theme_image(social_icons_image_array($entity->icon)), $link),
       //theme_image(social_icons_image_array($entity->hover_icon)),
       implode(' | ', $actions)
     );
