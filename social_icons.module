@@ -49,10 +49,10 @@ function social_icons_menu() {
   return $items;
 }
 
-
 /**
  * Implements hook_entity_info()
  */
+ 
 function social_icons_entity_info() {
   return array(
     'social_icons' => array(                               // Системное имя сущности
@@ -84,6 +84,7 @@ function social_icons_entity_info() {
 /**
  * Проверка прав доступа
  */
+ 
 function social_icons_access($op, $entity, $account = NULL, $entity_type = 'social_icons') {
   return user_access('administer site configuration'); // сущность будет доступна только администратору сайта
 }
@@ -101,9 +102,11 @@ function social_icons_load($id) {
  * @param $fid - fid of files
  *
  */
+ 
 function social_icons_image_array($fid) {
+  $fid = file_load($fid);
   return array(
-    'path' => file_load($fid)->uri,
+    'path' => $fid->uri,
     'width' => '50px',
     'height' => '50px',
     'attributes' => array('class' => 'some-img', 'id' => 'my-img'),
@@ -114,6 +117,7 @@ function social_icons_image_array($fid) {
  * Realisation function social_icons_list()
  * Callback icon list
  */
+ 
 function social_icons_list() {
   $social_icons = db_select('social_icons', 'si')
     ->fields('si', array('id'))
@@ -144,9 +148,8 @@ function social_icons_list() {
 /**
  * Implements hook_form()
  */
+ 
 function social_icons_setting_form($form, &$form_state, $social_icons = NULL, $op = 'edit') {
-  // $arg = is_numeric(arg(4)) ? arg(4) : NULL;
-//  $social_icons = isset($arg) ? social_icons_load(arg(4)) : '';
 
   $form['setting'] = array(
     '#title' => t('Add icon'),
@@ -178,7 +181,7 @@ function social_icons_setting_form($form, &$form_state, $social_icons = NULL, $o
     '#title' => t('Upload icon'),
     '#type' => 'managed_file',
     '#default_value' => isset($social_icons->icon) ? $social_icons->icon : '',
-
+    '#upload_location' => 'public://pictures',
     //  '#required' => TRUE,
 
   );
@@ -186,7 +189,7 @@ function social_icons_setting_form($form, &$form_state, $social_icons = NULL, $o
     '#title' => t('Upload hover icon'),
     '#type' => 'managed_file',
     '#default_value' => isset($social_icons->hover_icon) ? $social_icons->hover_icon : '',
-
+    '#upload_location' => 'public://pictures',
     //  '#required' => TRUE,
 
   );
@@ -200,76 +203,31 @@ function social_icons_setting_form($form, &$form_state, $social_icons = NULL, $o
 /**
  * Implements hook_forms_validate().
  */
+ 
 function social_icons_setting_form_validate($form, $form_state) {
 
   if (!preg_match('/^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/', $form_state['values']['link'])) {
     form_set_error('link', t('"Link" do not begin "http://" or "https://".'));
   }
-
-  $validators = array(
-    'file_validate_is_image' => array(), // Проверка, действительно ли файл является изображением
-    'file_validate_extensions' => array('png gif jpg jpeg'), // Проверка на расширения
-    'file_validate_image_resolution' => array(variable_get('user_picture_dimensions', '85x85')),
-    'file_validate_size' => array(variable_get('user_picture_file_size', '30') * 1024),
-  );
-  
-  $icon = file_save_upload('icon', $validators, 'public://');
- 
-
-      // Обработка выгрузок изображений.
-  if (!empty($edit['icon']->fid)) {
-	  $icon = $edit['icon'];
-	  
-	  // Если картинка представляет собой временный файл, переместить
-	  // его конечное расположение и сделать постоянным.
-	  if (($icon->status & FILE_STATUS_PERMANENT) == 0) {
-		  $info = image_get_info($icon->uri);
-		  $icon_directory = variable_get('file_default_scheme', 'public')
-		  . '://' . variable_get('user_picture_path', 'pictures');
-		  
-		  // Подготовить каталог изображений.
-		  file_prepare_directory($icon_directory, FILE_CREATE_DIRECTORY);
-		  $destination = file_stream_wrapper_uri_normalize($icon_directory
-		  . '/icon-' . $account->uid . '-' . REQUEST_TIME . '.' . $info['extension']);
-		  if ($icon = file_move($icon, $destination, FILE_EXISTS_RENAME))
-		  {
-			  $icon->status |= FILE_STATUS_PERMANENT;
-			  $edit['icon'] = file_save($icon);
-			  }
-		 }
-}
-    
-  
-  //if ($icon = file_move(stdClass $source, $dest, $replace = FILE_EXISTS_RENAME)) {
-   //Save the file for use in the submit handler.
-   $form_state['values']['icon'] = $icon;
-   
-     
-   
- // }
-  
-  $hover_icon = file_save_upload('hover_icon', $validators, 'public://');
-  
-  $form_state['values']['hover_icon'] = $hover_icon;
-
-  // Загружаем файл в sites/default/files (по умолчанию)
- /*if ($file = file_save_upload('icon', $validators, 'public://')) {
-    $form_state['values']['icon'] = $file; // передаём информацию о файле в ф-ю social_icons_setting_form_submit()
-  }
- else {
-    form_set_error('icon', 'Файл не был загружен');
-  }*/
 }
 
 /**
  * Implements hook_form_submit()
  */
+
 function social_icons_setting_form_submit($form, &$form_state) {
-  // загружем основную иконку
-  $icon = file_load($form_state['values']['icon']);
-  // $icon->status = 1;
-  $icon = file_save($icon);
-  if ($form_state['values']['id']) {
+   
+  $icons = array(
+           $form_state['values']['icon'],
+           $form_state['values']['hover_icon'],
+           );
+       foreach ($icons as $fid){
+           $file = file_load($fid);
+           $file->status = FILE_STATUS_PERMANENT;
+           file_save($file);
+}
+    
+   if ($form_state['values']['id']) {
     $social_icons = social_icons_load($form_state['values']['id']);
     $social_icons->title = $form_state['values']['title'];
     $social_icons->link = $form_state['values']['link'];
@@ -297,9 +255,7 @@ function social_icons_setting_form_submit($form, &$form_state) {
  * Realised delete entity
  */
 function social_icons_delete_form($form, &$form_state, $social_icons) {
-//  if (!drupal_valid_token($_GET['token'], 'social_icons-' . $social_icons->id)) {
-//    return drupal_access_denied();
-//  }
+
   $form['delete']= array(
     '#title' => t('Delete Icons'),
     '#type' => 'fieldset',
@@ -333,76 +289,3 @@ function social_icon_delete_form_submit($form, &$form_state) {
   $form_state['redirect'] = 'admin/config/administration/social-icon/list';
 }
 
-/**
- * Реализация hook_block_info().
- */
-
-function social_icons_block_info() {
-    
-    $blocks['social_icons'] = array(
-      'info'    => t('Social Icons'),
-      'status'  => FALSE,
-      'weight'  => 0, 
-    );
-    return $blocks;
-}
-
-/**
- * Реализация hook_block_configure(). 
- *
-
-function social_icons_configure($delta) {
-    $form = array ();
-    
-    switch($delta) {
-      
-    case 'social_icons':
-     $form['social_icons_count'] = array (
-      '#type' => 'textfield',
-      '#title' => t('Введите количество выводиммых иконок'),
-      '#size' => 6,
-      '#description' => t('введите количество ожыдающих иконок'),
-      '#default_value' => variable_get('social_icons_count', 3),
-      );
-      break;
-      
-}	
-
-return $form;
-
-}
-*/
-
-
-function social_icons_block_view($delta = '') {
-		
-	switch ($delta) {
-		case 'social_icons':
-		    $block['subject'] = t('Социальные сети');
-			$block['content'] = social_icons_block_contents($delta);			
-			return $block;	
-            break;
-      }
-	  
-}
-
-function social_icons_block_contents($delta) { 
-    $social_icons = db_select('social_icons', 'si')
-    ->fields('si', array('id'))
-    ->orderBy('si.id')
-    ->execute();
-    $rows = array();
-
-
-  foreach ($social_icons as $id) {
-    $entity = social_icons_load($id->id);
-      $rows[] = array(
-      theme_image(social_icons_image_array($entity->icon)),
-      //theme_image(social_icons_image_array($entity->hover_icon)),
-      implode(' | ', $actions)
-    );
-  }
-  $output = theme('table', array('header' => $header, 'rows' => $rows));
-
-  return $output;
-}
